@@ -18,14 +18,15 @@ class RoutesHistoryTab(QWidget):
 
         layout = QVBoxLayout(self)
         self.table = QTableWidget(0, 7)
+        self.table.setAlternatingRowColors(True)
         self.table.setHorizontalHeaderLabels([
-            "Date",
-            "Weekday",
-            "Preset Used",
-            "Vehicles Used",
-            "Total Distance",
-            "Total Time",
-            "Actions",
+            "Data",
+            "Dia da Semana",
+            "Preset Usado",
+            "Veículos Usados",
+            "Distância Total",
+            "Tempo Total",
+            "Ações",
         ])
         layout.addWidget(self.table)
         self.refresh()
@@ -51,13 +52,13 @@ class RoutesHistoryTab(QWidget):
             act = QWidget()
             hl = QHBoxLayout(act)
             hl.setContentsMargins(0, 0, 0, 0)
-            b_details = QPushButton("View Details")
+            b_details = QPushButton("Ver Detalhes")
             b_details.clicked.connect(lambda _=False, row=r: self.view_details(row))
-            b_map = QPushButton("View Map")
+            b_map = QPushButton("Ver Mapa")
             b_map.clicked.connect(lambda _=False, row=r: self.view_map(row))
-            b_export = QPushButton("Export")
+            b_export = QPushButton("Exportar")
             b_export.clicked.connect(lambda _=False, row=r: self.export_route(row))
-            b_del = QPushButton("Delete")
+            b_del = QPushButton("Excluir")
             b_del.clicked.connect(lambda _=False, rid=r["id"]: self.delete_route(rid))
             hl.addWidget(b_details)
             hl.addWidget(b_map)
@@ -66,7 +67,7 @@ class RoutesHistoryTab(QWidget):
             self.table.setCellWidget(i, 6, act)
 
     def view_details(self, row) -> None:
-        QMessageBox.information(self, "Route Details", row["route_summary"] or "No details available")
+        QMessageBox.information(self, "Detalhes da Rota", row["route_summary"] or "Nenhum detalhe disponível")
 
     def view_map(self, row) -> None:
         payload = row["map_payload"]

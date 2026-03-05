@@ -26,6 +26,7 @@ class PresetsTab(QWidget):
         root = QVBoxLayout(self)
         card = QFrame()
         form = QFormLayout(card)
+        form.setSpacing(10)
 
         self.name = QLineEdit()
         self.time_limit = QComboBox()
@@ -44,30 +45,31 @@ class PresetsTab(QWidget):
         self.meta.addItems(["GUIDED_LOCAL_SEARCH", "TABU_SEARCH", "SIMULATED_ANNEALING", "AUTOMATIC"])
         self.solution_limit = QComboBox()
         self.solution_limit.addItems(["", "100", "500", "1000", "5000"])
-        self.log_search = QCheckBox("Log Search")
-        self.full_prop = QCheckBox("Use Full Propagation")
+        self.log_search = QCheckBox("Log da Busca")
+        self.full_prop = QCheckBox("Usar Propagação Completa")
         self.full_prop.setChecked(True)
 
-        form.addRow("Preset Name", self.name)
-        form.addRow("Time Limit (seconds)", self.time_limit)
-        form.addRow("Stop Time (minutes)", self.stop_min)
-        form.addRow("Penalty Value", self.penalty)
-        form.addRow("First Solution Strategy", self.first_solution)
-        form.addRow("Local Search Metaheuristic", self.meta)
-        form.addRow("Solution Limit", self.solution_limit)
+        form.addRow("Nome do Preset", self.name)
+        form.addRow("Limite de Tempo (segundos)", self.time_limit)
+        form.addRow("Tempo de Parada (minutos)", self.stop_min)
+        form.addRow("Valor de Penalidade", self.penalty)
+        form.addRow("Estratégia Inicial", self.first_solution)
+        form.addRow("Metaheurística", self.meta)
+        form.addRow("Limite de Soluções", self.solution_limit)
         form.addRow(self.log_search)
         form.addRow(self.full_prop)
 
         actions = QHBoxLayout()
-        self.save_btn = QPushButton("Add Preset")
+        self.save_btn = QPushButton("Adicionar Preset")
         self.save_btn.clicked.connect(self.save)
-        clear_btn = QPushButton("Clear")
+        clear_btn = QPushButton("Limpar")
         clear_btn.clicked.connect(self.clear)
         actions.addWidget(self.save_btn)
         actions.addWidget(clear_btn)
 
         self.table = QTableWidget(0, 7)
-        self.table.setHorizontalHeaderLabels(["ID", "Preset", "Time", "Strategy", "Meta", "Penalty", "Actions"])
+        self.table.setAlternatingRowColors(True)
+        self.table.setHorizontalHeaderLabels(["ID", "Preset", "Tempo", "Estratégia", "Meta", "Penalidade", "Ações"])
 
         root.addWidget(card)
         root.addLayout(actions)
@@ -76,7 +78,7 @@ class PresetsTab(QWidget):
 
     def clear(self) -> None:
         self.editing_id = None
-        self.save_btn.setText("Add Preset")
+        self.save_btn.setText("Adicionar Preset")
         self.name.clear()
 
     def save(self) -> None:
@@ -120,7 +122,7 @@ class PresetsTab(QWidget):
         if not r:
             return
         self.editing_id = pid
-        self.save_btn.setText("Update Preset")
+        self.save_btn.setText("Atualizar Preset")
         self.name.setText(r["preset_name"])
         self.time_limit.setCurrentText(str(r["time_limit_seconds"]))
         self.stop_min.setCurrentText(str(r["stop_time_minutes"]))
@@ -148,9 +150,9 @@ class PresetsTab(QWidget):
             w = QWidget()
             hl = QHBoxLayout(w)
             hl.setContentsMargins(0, 0, 0, 0)
-            b1 = QPushButton("Edit")
+            b1 = QPushButton("Editar")
             b1.clicked.connect(lambda _=False, pid=r["id"]: self.edit(pid))
-            b2 = QPushButton("Delete")
+            b2 = QPushButton("Excluir")
             b2.clicked.connect(lambda _=False, pid=r["id"]: self.delete(pid))
             hl.addWidget(b1)
             hl.addWidget(b2)

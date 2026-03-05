@@ -26,6 +26,7 @@ class VeiculosTab(QWidget):
         root = QVBoxLayout(self)
         card = QFrame()
         form = QFormLayout(card)
+        form.setSpacing(10)
         self.nome = QLineEdit()
         self.departure = QLineEdit()
         self.destination = QLineEdit()
@@ -36,22 +37,23 @@ class VeiculosTab(QWidget):
             self.departure_time.addItem(v)
             self.end_time.addItem(v)
 
-        form.addRow("Name", self.nome)
-        form.addRow("Departure", self.departure)
-        form.addRow("Destination", self.destination)
-        form.addRow("Departure Time", self.departure_time)
-        form.addRow("End Time", self.end_time)
+        form.addRow("Nome", self.nome)
+        form.addRow("Partida", self.departure)
+        form.addRow("Destino", self.destination)
+        form.addRow("Hora de Partida", self.departure_time)
+        form.addRow("Hora Limite", self.end_time)
 
         actions = QHBoxLayout()
-        self.save_btn = QPushButton("Add Vehicle")
+        self.save_btn = QPushButton("Adicionar Veículo")
         self.save_btn.clicked.connect(self.save)
-        clear_btn = QPushButton("Clear")
+        clear_btn = QPushButton("Limpar")
         clear_btn.clicked.connect(self.clear_form)
         actions.addWidget(self.save_btn)
         actions.addWidget(clear_btn)
 
         self.table = QTableWidget(0, 8)
-        self.table.setHorizontalHeaderLabels(["ID", "Name", "Departure", "Destination", "Departure Time", "End Time", "Active", "Actions"])
+        self.table.setAlternatingRowColors(True)
+        self.table.setHorizontalHeaderLabels(["ID", "Nome", "Partida", "Destino", "Hora de Partida", "Hora Limite", "Status", "Ações"])
 
         root.addWidget(card)
         root.addLayout(actions)
@@ -60,14 +62,14 @@ class VeiculosTab(QWidget):
 
     def clear_form(self) -> None:
         self.editing_id = None
-        self.save_btn.setText("Add Vehicle")
+        self.save_btn.setText("Adicionar Veículo")
         self.nome.clear()
         self.departure.clear()
         self.destination.clear()
 
     def save(self) -> None:
         if not self.nome.text().strip():
-            QMessageBox.warning(self, "Validation", "Vehicle name is required")
+            QMessageBox.warning(self, "Validação", "Nome do veículo é obrigatório")
             return
         params = (
             self.nome.text().strip(),
@@ -94,7 +96,7 @@ class VeiculosTab(QWidget):
         if not r:
             return
         self.editing_id = vid
-        self.save_btn.setText("Update Vehicle")
+        self.save_btn.setText("Atualizar Veículo")
         self.nome.setText(r["nome"])
         self.departure.setText(r["departure"] or "")
         self.destination.setText(r["destination"] or "")
@@ -119,15 +121,15 @@ class VeiculosTab(QWidget):
             self.table.setItem(i, 3, QTableWidgetItem(row["destination"] or ""))
             self.table.setItem(i, 4, QTableWidgetItem(row["departure_time"] or ""))
             self.table.setItem(i, 5, QTableWidgetItem(row["end_time"] or ""))
-            self.table.setItem(i, 6, QTableWidgetItem("Yes" if row["is_active"] else "No"))
+            self.table.setItem(i, 6, QTableWidgetItem("Ativo" if row["is_active"] else "Inativo"))
             btns = QWidget()
             hl = QHBoxLayout(btns)
             hl.setContentsMargins(0, 0, 0, 0)
-            b1 = QPushButton("Edit")
+            b1 = QPushButton("Editar")
             b1.clicked.connect(lambda _=False, vid=row["id"]: self.edit(vid))
-            b2 = QPushButton("Activate/Deactivate")
+            b2 = QPushButton("Ativar/Desativar")
             b2.clicked.connect(lambda _=False, vid=row["id"]: self.toggle(vid))
-            b3 = QPushButton("Delete")
+            b3 = QPushButton("Excluir")
             b3.clicked.connect(lambda _=False, vid=row["id"]: self.delete(vid))
             hl.addWidget(b1)
             hl.addWidget(b2)

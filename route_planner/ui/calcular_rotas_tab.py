@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from datetime import datetime
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QComboBox,
     QFrame,
@@ -16,7 +17,6 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from PySide6.QtCore import Qt
 
 from route_planner.database_manager import DatabaseManager
 from route_planner.services.geocode_service import GeocodeService
@@ -26,13 +26,13 @@ from route_planner.services.solver_service import SolverService
 from route_planner.ui.route_map_dialog import RouteMapDialog
 
 WEEKDAY_FIELD = {
-    "Monday": "collect_monday",
-    "Tuesday": "collect_tuesday",
-    "Wednesday": "collect_wednesday",
-    "Thursday": "collect_thursday",
-    "Friday": "collect_friday",
-    "Saturday": "collect_saturday",
-    "Sunday": "collect_sunday",
+    "Segunda": "collect_monday",
+    "Terça": "collect_tuesday",
+    "Quarta": "collect_wednesday",
+    "Quinta": "collect_thursday",
+    "Sexta": "collect_friday",
+    "Sábado": "collect_saturday",
+    "Domingo": "collect_sunday",
 }
 
 
@@ -60,16 +60,16 @@ class CalcularRotasTab(QWidget):
         self.vehicles_list.setMaximumHeight(110)
         self.refresh_vehicles()
 
-        calc_btn = QPushButton("Calculate Route")
+        calc_btn = QPushButton("Calcular Rota")
         calc_btn.clicked.connect(self.calculate)
-        map_btn = QPushButton("View Route Map")
+        map_btn = QPushButton("Ver Mapa da Rota")
         map_btn.clicked.connect(self.open_map)
 
-        ctl.addWidget(QLabel("Weekday"))
+        ctl.addWidget(QLabel("Dia da Semana"))
         ctl.addWidget(self.day_combo)
         ctl.addWidget(QLabel("Preset"))
         ctl.addWidget(self.preset_combo)
-        ctl.addWidget(QLabel("Vehicles"))
+        ctl.addWidget(QLabel("Veículos"))
         ctl.addWidget(self.vehicles_list)
         ctl.addWidget(calc_btn)
         ctl.addWidget(map_btn)
@@ -113,14 +113,14 @@ class CalcularRotasTab(QWidget):
         preset_id = self.preset_combo.currentData()
         vehicle_ids = self.selected_vehicle_ids()
         if not vehicle_ids:
-            QMessageBox.warning(self, "Validation", "Select at least one vehicle.")
+            QMessageBox.warning(self, "Validação", "Selecione ao menos um veículo.")
             return
 
         clients = self.db.fetchall(
             f"SELECT * FROM clientes WHERE is_active=1 AND {WEEKDAY_FIELD[day]}=1 AND latitude IS NOT NULL AND longitude IS NOT NULL"
         )
         if not clients:
-            QMessageBox.warning(self, "Data", "No active geocoded clients for selected weekday.")
+            QMessageBox.warning(self, "Dados", "Nenhum cliente ativo geocodificado para o dia selecionado.")
             return
 
         vehicles = self.db.fetchall(
@@ -143,7 +143,7 @@ class CalcularRotasTab(QWidget):
             vehicle_names.append(v["nome"])
 
         if not starts:
-            QMessageBox.warning(self, "Data", "Selected vehicles must have geocodable Departure and Destination.")
+            QMessageBox.warning(self, "Dados", "Os veículos selecionados precisam ter Partida e Destino geocodificáveis.")
             return
 
         customer_indices, windows = [], {}
@@ -176,27 +176,26 @@ class CalcularRotasTab(QWidget):
             }
         )
         if not result:
-            self.output.setPlainText("No solution found")
+            self.output.setPlainText("Nenhuma solução encontrada")
             return
 
         lines, map_lines = [], []
         for route in result.routes:
-            lines.append(f"VEHICLE {route['vehicle'] + 1}")
-            coords, labels = [], []
+            lines.append(f"VEÍCULO {route['vehicle'] + 1}")
+            coords = []
             for stop in route["nodes"]:
                 p = points[stop["node"]]
                 hh = stop["arrival"] // 3600
                 mm = (stop["arrival"] % 3600) // 60
                 lines.append(f"→ {p['label']} ({hh:02d}:{mm:02d})")
                 coords.append(p["coord"])
-                labels.append(p["label"])
-            lines.append(f"Distance: {route['distance']/1000:.1f} km\n")
-            map_lines.append({"name": f"Vehicle {route['vehicle'] + 1}", "coords": coords})
+            lines.append(f"Distância: {route['distance']/1000:.1f} km\n")
+            map_lines.append({"name": f"Veículo {route['vehicle'] + 1}", "coords": coords})
 
-        lines.append(f"Global Distance: {result.total_distance/1000:.2f} km")
-        lines.append(f"Global Time: {result.total_time//3600}h{(result.total_time%3600)//60:02d}")
-        lines.append(f"Served Clients: {len(clients)-len(result.dropped_nodes)}")
-        lines.append(f"Unserved Clients: {len(result.dropped_nodes)}")
+        lines.append(f"Distância Total: {result.total_distance/1000:.2f} km")
+        lines.append(f"Tempo Total: {result.total_time//3600}h{(result.total_time%3600)//60:02d}")
+        lines.append(f"Clientes Atendidos: {len(clients)-len(result.dropped_nodes)}")
+        lines.append(f"Clientes Não Atendidos: {len(result.dropped_nodes)}")
         summary = "\n".join(lines)
         self.output.setPlainText(summary)
 
