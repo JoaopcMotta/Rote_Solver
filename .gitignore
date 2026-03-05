@@ -1,0 +1,3 @@
+__pycache__/
+*.pyc
+route_planner/database/db.sqlite

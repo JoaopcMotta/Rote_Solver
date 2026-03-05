@@ -1,0 +1,6 @@
+ortools
+pyside6
+requests
+sqlite3
+folium
+pandas
