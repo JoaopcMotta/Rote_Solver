@@ -13,9 +13,13 @@ class MapService:
 
         for i, route in enumerate(route_lines):
             color = self.COLORS[i % len(self.COLORS)]
-            folium.PolyLine(route["coords"], color=color, weight=5, opacity=0.8).add_to(m)
-            for idx, point in enumerate(route["coords"]):
-                folium.Marker(point, tooltip=f"{route['name']} #{idx}").add_to(m)
+            folium.PolyLine(route["coords"], color=color, weight=5, opacity=0.85, tooltip=route["name"]).add_to(m)
+            for idx, point in enumerate(route["coords"], start=1):
+                folium.Marker(
+                    point,
+                    tooltip=f"{route['name']} #{idx}",
+                    icon=folium.DivIcon(html=f"<div style='font-weight:bold;color:{color};'>{idx}</div>"),
+                ).add_to(m)
 
         m.save(output_file)
         return output_file

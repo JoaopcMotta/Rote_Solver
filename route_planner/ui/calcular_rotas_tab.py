@@ -127,11 +127,11 @@ class CalcularRotasTab(QWidget):
             f"SELECT * FROM veiculos WHERE id IN ({','.join('?' for _ in vehicle_ids)})",
             vehicle_ids,
         )
-        points, starts, ends, vehicle_start_times = [], [], [], []
+        points, starts, ends, vehicle_start_times, vehicle_end_times = [], [], [], [], []
         vehicle_names = []
         for v in vehicles:
-            s = self.geocode.geocode(v["departure"]) or self.geocode.geocode(v["departure"])
-            e = self.geocode.geocode(v["destination"]) or self.geocode.geocode(v["destination"])
+            s = self.geocode.geocode(v["departure"])
+            e = self.geocode.geocode(v["destination"])
             if not s or not e:
                 continue
             starts.append(len(points))
@@ -139,7 +139,12 @@ class CalcularRotasTab(QWidget):
             ends.append(len(points))
             points.append({"uid": f"v{v['id']}_e", "coord": e, "label": v["destination"], "type": "end"})
             vehicle_start_times.append(self.hhmm_to_sec(v["departure_time"], 6 * 3600))
+            vehicle_end_times.append(self.hhmm_to_sec(v["end_time"], 18 * 3600))
             vehicle_names.append(v["nome"])
+
+        if not starts:
+            QMessageBox.warning(self, "Data", "Selected vehicles must have geocodable Departure and Destination.")
+            return
 
         customer_indices, windows = [], {}
         for c in clients:
@@ -159,12 +164,15 @@ class CalcularRotasTab(QWidget):
                 "customer_node_indices": customer_indices,
                 "time_windows": windows,
                 "vehicle_start_times": vehicle_start_times,
+                "vehicle_end_times": vehicle_end_times,
                 "service_time": int(preset["stop_time_minutes"]) * 60,
                 "penalty": int(preset["penalty_value"]),
                 "time_limit": int(preset["time_limit_seconds"]),
                 "first_solution_strategy": preset["first_solution_strategy"],
                 "local_search_metaheuristic": preset["local_search_metaheuristic"],
                 "use_full_propagation": bool(preset["use_full_propagation"]),
+                "solution_limit": preset["solution_limit"],
+                "log_search": bool(preset["log_search"]),
             }
         )
         if not result:

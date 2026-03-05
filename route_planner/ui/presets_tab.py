@@ -26,14 +26,17 @@ class PresetsTab(QWidget):
         root = QVBoxLayout(self)
         card = QFrame()
         form = QFormLayout(card)
+
         self.name = QLineEdit()
         self.time_limit = QComboBox()
         self.stop_min = QComboBox()
-        self.penalty = QLineEdit("10000")
+        self.penalty = QComboBox()
         for v in [10, 20, 30, 45, 60, 90, 120]:
             self.time_limit.addItem(str(v))
         for v in [5, 10, 15, 20, 30]:
             self.stop_min.addItem(str(v))
+        for v in [1000, 5000, 10000, 20000, 50000]:
+            self.penalty.addItem(str(v))
 
         self.first_solution = QComboBox()
         self.first_solution.addItems(["PATH_CHEAPEST_ARC", "PARALLEL_CHEAPEST_INSERTION", "SAVINGS", "AUTOMATIC"])
@@ -82,7 +85,7 @@ class PresetsTab(QWidget):
             self.name.text().strip(),
             int(self.time_limit.currentText()),
             int(self.stop_min.currentText()),
-            int(self.penalty.text() or 10000),
+            int(self.penalty.currentText()),
             self.first_solution.currentText(),
             self.meta.currentText(),
             int(sol_lim) if sol_lim else None,
@@ -121,7 +124,7 @@ class PresetsTab(QWidget):
         self.name.setText(r["preset_name"])
         self.time_limit.setCurrentText(str(r["time_limit_seconds"]))
         self.stop_min.setCurrentText(str(r["stop_time_minutes"]))
-        self.penalty.setText(str(r["penalty_value"]))
+        self.penalty.setCurrentText(str(r["penalty_value"]))
         self.first_solution.setCurrentText(r["first_solution_strategy"])
         self.meta.setCurrentText(r["local_search_metaheuristic"])
         self.solution_limit.setCurrentText(str(r["solution_limit"] or ""))

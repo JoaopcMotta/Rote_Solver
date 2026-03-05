@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from PySide6.QtWidgets import QHBoxLayout, QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QMessageBox, QHBoxLayout, QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
 
 from route_planner.database_manager import DatabaseManager
 from route_planner.services.map_service import MapService
@@ -17,8 +17,16 @@ class RoutesHistoryTab(QWidget):
         self.last_dialog = None
 
         layout = QVBoxLayout(self)
-        self.table = QTableWidget(0, 8)
-        self.table.setHorizontalHeaderLabels(["Date", "Weekday", "Preset Used", "Vehicles Used", "Total Distance", "Total Time", "Details", "Actions"])
+        self.table = QTableWidget(0, 7)
+        self.table.setHorizontalHeaderLabels([
+            "Date",
+            "Weekday",
+            "Preset Used",
+            "Vehicles Used",
+            "Total Distance",
+            "Total Time",
+            "Actions",
+        ])
         layout.addWidget(self.table)
         self.refresh()
 
@@ -39,20 +47,26 @@ class RoutesHistoryTab(QWidget):
             self.table.setItem(i, 3, QTableWidgetItem(r["vehicles_used"] or ""))
             self.table.setItem(i, 4, QTableWidgetItem(f"{r['distancia_total']/1000:.2f} km"))
             self.table.setItem(i, 5, QTableWidgetItem(f"{int(r['tempo_total'])//3600}h{int(r['tempo_total'])%3600//60:02d}"))
-            self.table.setItem(i, 6, QTableWidgetItem(r["route_summary"] or ""))
+
             act = QWidget()
             hl = QHBoxLayout(act)
             hl.setContentsMargins(0, 0, 0, 0)
+            b_details = QPushButton("View Details")
+            b_details.clicked.connect(lambda _=False, row=r: self.view_details(row))
             b_map = QPushButton("View Map")
             b_map.clicked.connect(lambda _=False, row=r: self.view_map(row))
             b_export = QPushButton("Export")
             b_export.clicked.connect(lambda _=False, row=r: self.export_route(row))
             b_del = QPushButton("Delete")
             b_del.clicked.connect(lambda _=False, rid=r["id"]: self.delete_route(rid))
+            hl.addWidget(b_details)
             hl.addWidget(b_map)
             hl.addWidget(b_export)
             hl.addWidget(b_del)
-            self.table.setCellWidget(i, 7, act)
+            self.table.setCellWidget(i, 6, act)
+
+    def view_details(self, row) -> None:
+        QMessageBox.information(self, "Route Details", row["route_summary"] or "No details available")
 
     def view_map(self, row) -> None:
         payload = row["map_payload"]
