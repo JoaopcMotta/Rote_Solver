@@ -22,6 +22,7 @@ SCHEMA_STATEMENTS: Iterable[str] = (
         thursday INTEGER NOT NULL DEFAULT 1,
         friday INTEGER NOT NULL DEFAULT 1,
         saturday INTEGER NOT NULL DEFAULT 0,
+        sunday INTEGER NOT NULL DEFAULT 0,
         time_window_start TEXT,
         time_window_end TEXT,
         period TEXT

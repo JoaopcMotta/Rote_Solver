@@ -1,6 +1,6 @@
 ortools
 pyside6
+pyside6-addons
 requests
-sqlite3
 folium
 pandas

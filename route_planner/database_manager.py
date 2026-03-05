@@ -10,19 +10,18 @@ DB_PATH = Path(__file__).resolve().parent / "database" / "db.sqlite"
 
 
 class DatabaseManager:
-    """Gerencia conexão e inicialização do banco SQLite."""
-
     def __init__(self, db_path: Path | None = None) -> None:
         self.db_path = db_path or DB_PATH
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self.conn = sqlite3.connect(self.db_path)
         self.conn.row_factory = sqlite3.Row
+        self.conn.execute("PRAGMA foreign_keys = ON")
         self._initialize_schema()
 
     def _initialize_schema(self) -> None:
-        cursor = self.conn.cursor()
+        c = self.conn.cursor()
 
-        cursor.execute(
+        c.execute(
             """
             CREATE TABLE IF NOT EXISTS clientes (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -30,79 +29,78 @@ class DatabaseManager:
                 endereco TEXT NOT NULL,
                 latitude REAL,
                 longitude REAL,
-                ativo INTEGER NOT NULL DEFAULT 1,
-                segunda INTEGER NOT NULL DEFAULT 1,
-                terca INTEGER NOT NULL DEFAULT 1,
-                quarta INTEGER NOT NULL DEFAULT 1,
-                quinta INTEGER NOT NULL DEFAULT 1,
-                sexta INTEGER NOT NULL DEFAULT 1,
-                sabado INTEGER NOT NULL DEFAULT 0,
-                hora_inicio TEXT,
-                hora_fim TEXT,
-                periodo TEXT
+                window_start TEXT DEFAULT '08:00',
+                window_end TEXT DEFAULT '18:00',
+                period TEXT DEFAULT 'Morning',
+                is_active INTEGER NOT NULL DEFAULT 1,
+                collect_monday INTEGER NOT NULL DEFAULT 1,
+                collect_tuesday INTEGER NOT NULL DEFAULT 1,
+                collect_wednesday INTEGER NOT NULL DEFAULT 1,
+                collect_thursday INTEGER NOT NULL DEFAULT 1,
+                collect_friday INTEGER NOT NULL DEFAULT 1,
+                collect_saturday INTEGER NOT NULL DEFAULT 0,
+                collect_sunday INTEGER NOT NULL DEFAULT 0
             )
             """
         )
 
-        cursor.execute(
+        c.execute(
             """
             CREATE TABLE IF NOT EXISTS veiculos (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 nome TEXT NOT NULL,
-                endereco_inicio TEXT NOT NULL,
-                endereco_fim TEXT NOT NULL,
-                hora_inicio TEXT NOT NULL,
-                hora_fim TEXT NOT NULL,
-                capacidade INTEGER NOT NULL DEFAULT 0,
-                ativo INTEGER NOT NULL DEFAULT 1
+                departure TEXT NOT NULL,
+                destination TEXT NOT NULL,
+                departure_time TEXT NOT NULL,
+                end_time TEXT NOT NULL,
+                capacidade INTEGER,
+                is_active INTEGER NOT NULL DEFAULT 1
             )
             """
         )
 
-        cursor.execute(
+        c.execute(
             """
-            CREATE TABLE IF NOT EXISTS matriz_distancia (
-                origem_id TEXT NOT NULL,
-                destino_id TEXT NOT NULL,
-                distancia_metros REAL NOT NULL,
-                tempo_segundos REAL NOT NULL,
-                ultima_atualizacao TEXT NOT NULL,
-                PRIMARY KEY (origem_id, destino_id)
+            CREATE TABLE IF NOT EXISTS distance_cache (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                origin_client_id TEXT NOT NULL,
+                destination_client_id TEXT NOT NULL,
+                distance_meters REAL NOT NULL,
+                duration_seconds REAL NOT NULL,
+                profile TEXT NOT NULL DEFAULT 'driving-car',
+                last_updated TEXT NOT NULL,
+                UNIQUE(origin_client_id, destination_client_id, profile)
             )
             """
         )
 
-        cursor.execute(
+        c.execute(
             """
             CREATE TABLE IF NOT EXISTS presets_solver (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                nome TEXT NOT NULL UNIQUE,
-                tempo_limite_segundos INTEGER NOT NULL DEFAULT 30,
-                solucao_limite INTEGER,
-                lns_tempo_limite INTEGER,
-                first_solution_strategy TEXT NOT NULL,
-                local_search_metaheuristic TEXT NOT NULL,
-                usar_relocate INTEGER NOT NULL DEFAULT 1,
-                usar_exchange INTEGER NOT NULL DEFAULT 1,
-                usar_2opt INTEGER NOT NULL DEFAULT 1,
-                usar_oropt INTEGER NOT NULL DEFAULT 1,
-                usar_cross INTEGER NOT NULL DEFAULT 0,
-                usar_lns INTEGER NOT NULL DEFAULT 1,
-                use_full_propagation INTEGER NOT NULL DEFAULT 1,
-                penalidade_cliente_nao_visitado INTEGER NOT NULL DEFAULT 10000,
-                tempo_parada_padrao_segundos INTEGER NOT NULL DEFAULT 600,
-                balancear_rotas INTEGER NOT NULL DEFAULT 0
+                preset_name TEXT NOT NULL UNIQUE,
+                time_limit_seconds INTEGER NOT NULL DEFAULT 30,
+                stop_time_minutes INTEGER NOT NULL DEFAULT 10,
+                penalty_value INTEGER NOT NULL DEFAULT 10000,
+                first_solution_strategy TEXT NOT NULL DEFAULT 'PARALLEL_CHEAPEST_INSERTION',
+                local_search_metaheuristic TEXT NOT NULL DEFAULT 'GUIDED_LOCAL_SEARCH',
+                solution_limit INTEGER,
+                log_search INTEGER NOT NULL DEFAULT 0,
+                use_full_propagation INTEGER NOT NULL DEFAULT 1
             )
             """
         )
 
-        cursor.execute(
+        c.execute(
             """
             CREATE TABLE IF NOT EXISTS rotas_calculadas (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 data_calculo TEXT NOT NULL,
                 dia_semana TEXT NOT NULL,
                 preset_id INTEGER NOT NULL,
+                vehicles_used TEXT,
+                route_summary TEXT,
+                map_payload TEXT,
                 distancia_total REAL NOT NULL,
                 tempo_total REAL NOT NULL,
                 FOREIGN KEY (preset_id) REFERENCES presets_solver(id)
@@ -110,7 +108,7 @@ class DatabaseManager:
             """
         )
 
-        cursor.execute(
+        c.execute(
             """
             CREATE TABLE IF NOT EXISTS rota_paradas (
                 rota_id INTEGER NOT NULL,
@@ -127,34 +125,53 @@ class DatabaseManager:
             """
         )
 
-        cursor.execute(
+        self._ensure_column("presets_solver", "preset_name", "TEXT")
+        self._ensure_column("clientes", "window_start", "TEXT DEFAULT '08:00'")
+        self._ensure_column("clientes", "window_end", "TEXT DEFAULT '18:00'")
+        self._ensure_column("clientes", "period", "TEXT DEFAULT 'Morning'")
+        self._ensure_column("clientes", "is_active", "INTEGER NOT NULL DEFAULT 1")
+        self._ensure_column("clientes", "collect_sunday", "INTEGER NOT NULL DEFAULT 0")
+        self._ensure_column("veiculos", "departure", "TEXT")
+        self._ensure_column("veiculos", "destination", "TEXT")
+        self._ensure_column("veiculos", "departure_time", "TEXT")
+        self._ensure_column("veiculos", "end_time", "TEXT")
+        self._ensure_column("veiculos", "is_active", "INTEGER NOT NULL DEFAULT 1")
+        self._ensure_column("rotas_calculadas", "vehicles_used", "TEXT")
+        self._ensure_column("rotas_calculadas", "route_summary", "TEXT")
+        self._ensure_column("rotas_calculadas", "map_payload", "TEXT")
+
+        c.execute(
             """
             INSERT OR IGNORE INTO presets_solver (
-                nome,
-                tempo_limite_segundos,
-                first_solution_strategy,
-                local_search_metaheuristic,
-                penalidade_cliente_nao_visitado,
-                tempo_parada_padrao_segundos
+                preset_name, time_limit_seconds, stop_time_minutes, penalty_value,
+                first_solution_strategy, local_search_metaheuristic
             ) VALUES (?, ?, ?, ?, ?, ?)
             """,
             (
                 "Rota padrão lavanderia",
                 30,
+                10,
+                10000,
                 "PARALLEL_CHEAPEST_INSERTION",
                 "GUIDED_LOCAL_SEARCH",
-                10000,
-                600,
             ),
         )
-
         self.conn.commit()
+
+    def _ensure_column(self, table: str, column: str, col_type: str) -> None:
+        cols = {r["name"] for r in self.conn.execute(f"PRAGMA table_info({table})").fetchall()}
+        if column not in cols:
+            self.conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {col_type}")
 
     def execute(self, query: str, params: Iterable[Any] = ()) -> sqlite3.Cursor:
-        cursor = self.conn.cursor()
-        cursor.execute(query, params)
+        cur = self.conn.cursor()
+        cur.execute(query, params)
         self.conn.commit()
-        return cursor
+        return cur
+
+    def executemany(self, query: str, params: Iterable[Iterable[Any]]) -> None:
+        self.conn.executemany(query, params)
+        self.conn.commit()
 
     def fetchall(self, query: str, params: Iterable[Any] = ()) -> list[sqlite3.Row]:
         return list(self.conn.execute(query, params).fetchall())
