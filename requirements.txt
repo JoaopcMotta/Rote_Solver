@@ -1,0 +1,6 @@
+ortools
+pyside6
+pyside6-addons
+requests
+folium
+pandas
